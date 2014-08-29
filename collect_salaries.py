@@ -37,9 +37,11 @@ def extractSalaryPercents(url):
     soup = BeautifulSoup(r.text)
     if url == 'http://data.shamsports.com/content/pages/data/salaries/2008/mavericks.jsp':
         tot = 106948621.
+    elif url == 'http://data.shamsports.com/content/pages/data/salaries/2007/jazz.jsp':
+        tot = 61310247.
     else:
         total_row = soup.find(is_total_row)
-        totals = [float(re.sub(',', '', t.string[1:])) for t in total_row.findAll('b')[1:]]
+        totals = [float(re.sub(',', '', t.string[1:])) for t in total_row.findAll('b')[1:] if (t.string is not None)]
         tot = totals[0]
 
     sal_table = soup.findAll(is_salary_table)[0]
@@ -48,7 +50,6 @@ def extractSalaryPercents(url):
     sal_strings = [s for s in sal_strings if s != 'N/A']
     sal_strings = [re.sub(r'[a-zA-Z]', '', s) for s in sal_strings]
     sals = [float_conv(re.sub(',', '', re.sub('\$', '', s))) for s in sal_strings]
-
     sal_percs = [sal / tot for sal in sals]
     return sal_percs
 
@@ -64,9 +65,9 @@ for year in df.columns:
 ncol = 42
 sal_perc_df = pd.DataFrame(np.ones((df.values[df.values == 1].size, ncol), 
     dtype=np.float64), columns=['team', 'year'] + ['p' + str(i) for i in range(1,41)])
+rc = 0
 
 # fill the salary df
-rc = 0
 scrape_bad = False
 for i in range(0, df.shape[0]):
     for j in range(0, df.shape[1]):
@@ -91,4 +92,4 @@ for i in range(0, df.shape[0]):
     if scrape_bad:
         break   
 
-# pickle.dump([df, sal_perc_df], open('payroll_shamsports.p', 'wb'))
+pickle.dump(sal_perc_df, open('payroll_shamsports.p', 'wb'))
