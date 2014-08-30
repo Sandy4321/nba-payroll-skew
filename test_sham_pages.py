@@ -53,13 +53,14 @@ for year in years:
     url = base + str(year) + '/' + tu + '.jsp'
     r = requests.get(url)
     if r.status_code != 404:
-        df.iloc[i, j] = 1 # score (jk Sixers don't know how to do that)
+        x[i, j] = 1 # score (jk Sixers don't know how to do that)
         print 'URL valid for team "' + tu + '" and year ' + str(year)
     else:
         print '404 for team "' + tu + '" and year ' + str(year)
     j += 1
 
 test_url[3] = tu
+df = pd.DataFrame(x, index=test_url, columns=years)
 
 # which columns are all zero?
 print df.columns[(df == 0).all()]
