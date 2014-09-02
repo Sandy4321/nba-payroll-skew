@@ -30,13 +30,36 @@ def isTeamURL(tag):
 
 team_urls = [base + tag['href'] for tag in soup.findAll(isTeamURL)]
 
-def isRecordPerc(tag):
-    return tag.name == 'td' and re.match('.[0-9][0-9][0-9]', tag.string)
+def isSeasonRow(tag):
+    return tag.name == 'tr' and tag.td is not None and \
+    tag.td.a is not None and tag.td.a.string is not None and \
+    (re.search('[0-9]{4}-[0-9]{2}', tag.td.a.string) is not None)
+
+# helper for finding the records after the season row
+def isTd(tag):
+    return tag.name == 'tr'
 
 for url in team_urls:
-    r = requests.get(url)
-    soup = BeautifulSoup(r.text)
     name_end = re.search('.htm', url).start()
     full_team = url[re.search('_', url).start() + 1:]
-    team = full_team[re.search('_', full_team).start() + 1 : re.search('.htm', full_team).start()]
-    
+    team_name = full_team[re.search('_', full_team).start() + 1 : re.search('.htm', full_team).start()]
+    r = requests.get(url)
+    soup = BeautifulSoup(r.text)
+
+    # 0 index is the 2014-2015 season
+    percs = soup.findAll(isSeasonRow)[1:9]
+
+    inds = performance_df[performance_df['team'] == team_name].index
+    counter = 0
+    for p in percs:
+        tds = p.findAll('td')
+        reg = float(tds[3].string)
+        playoff = tds[7].string
+        if playoff == '-':
+            playoff = float('nan')
+        performance_df.iat[inds[counter], 3] = reg
+        performance_df.iat[inds[counter], 4] = playoff
+        counter += 1
+
+# realized that we have like only one row for charlotte but current
+# method doesn't find the specific year, just fills in 07-14
