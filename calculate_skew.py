@@ -25,4 +25,6 @@ for i in range(0, sal_perc_df.shape[0]):
 
     # filter out the zeroes before calculating starpower
     sp = sum(abs(these_sal[these_sal != 0] - eq))
-    skews[i] = sp
+    skews[i] = float(sp)
+
+pickle.dump(skews, open('skews.p', 'wb'))
