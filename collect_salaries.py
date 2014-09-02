@@ -63,8 +63,7 @@ for year in df.columns:
 # columns: team | year | player 1 salary percentage | player 2 salary percentage ...
 # say that maximum of 40 players are being paid (should be ~ 12)
 ncol = 42
-sal_perc_df = pd.DataFrame(np.ones((df.values[df.values == 1].size, ncol), 
-    dtype=np.float64), columns=['team', 'year'] + ['p' + str(i) for i in range(1,41)])
+sal_perc_df = pd.DataFrame(np.ones((df.values[df.values == 1].size, ncol), dtype=np.float64), columns=['team', 'year'] + ['p' + str(i) for i in range(1,41)])
 rc = 0
 
 # fill the salary df
