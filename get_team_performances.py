@@ -20,6 +20,9 @@ performance_df['team'] = sal_perc_df['team']
 performance_df['year'] = sal_perc_df['year']
 performance_df['skew'] = pickle.load(open('skews.p', 'rb'))
 
+
+
+
 base = 'http://www.landofbasketball.com/'
 url = base + 'nba_teams.htm'
 r = requests.get(url)
@@ -60,6 +63,3 @@ for url in team_urls:
         performance_df.iat[inds[counter], 3] = reg
         performance_df.iat[inds[counter], 4] = playoff
         counter += 1
-
-# realized that we have like only one row for charlotte but current
-# method doesn't find the specific year, just fills in 07-14
