@@ -33,7 +33,8 @@ for i in range(0, df.shape[0]):
                 print 'Improve your extract function, you noob.'
                 scrape_bad = True
                 break
-            sal_percs += [0] * ((ncol - 2) - len(sal_percs)) # pad the zeros
+            sal_percs += [0] * ((ncol - 2) - len(sal_percs)) 
+            # pad the zeros
             sal_perc_df.iloc[rc, 2:] = sal_percs # fill that row in         
             rc += 1
             print 'Finished payroll for ' + df.index[i] + ', ' + str(df.columns[j])

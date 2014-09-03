@@ -84,12 +84,26 @@ for i in range(0, len(teams)):
 # New Orleans Hornets/New Orleans Pelicans, Seattle Supersonics/
 # Oklahoma City Thunder
 
-# Charlotte Bobcats (only changing to Charlotte Hornets for 
-# 2014-2015 season)
-
-sal_perc_df_full.iloc[168:176,0:5]
-
 # NO Hornets
 sal_perc_df_full.iloc[144:150, 2:] = sal_perc_df[sal_perc_df['team'] == 'hornets'].iloc[0:-1, 2:]
 # NO Pelicans
 sal_perc_df_full.iloc[150:152, 2:] = sal_perc_df[sal_perc_df['team'] == 'pelicans'].iloc[:, 2:]
+# OKC
+sal_perc_df_full.iloc[218:224, 2:] = sal_perc_df[sal_perc_df['team'] == 'thunder'].iloc[:, 2:]
+
+# now salaries that we haven't collected:
+# Supersonics data can't be found on ShamSports, so we're making it nan
+sal_perc_df_full.iloc[216:218, 2:] = float('nan')
+
+# Charlotte Bobcats (only changing to Charlotte Hornets for 
+# 2014-2015 season)
+sal_perc_df_full.iloc[168:176, 0:3]
+
+i = 0
+for year in range(2007, 2015):
+    sal_percs = cs.extractSalaryPercents('http://data.shamsports.com/content/pages/data/salaries/' + str(year) + '/bobcats.jsp')
+    sal_percs += [0] * ((ncol - 2) - len(sal_percs))
+    sal_perc_df_full.iloc[168 + i, 2:] = sal_percs
+    i += 1
+
+pickle.dump(sal_perc_df_full, open('fixed_payroll_shamsports.p', 'wb'))
