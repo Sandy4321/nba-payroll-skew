@@ -29,7 +29,7 @@ performance_df['skew'] = pickle.load(open('skews.p', 'rb'))
 
 performance_df.team[performance_df.team == 'charlotte_bobcats'] = u'charlotte_hornets_charlotte_bobcats'
 performance_df.team[performance_df.team == 'seattle_supersonics'] = u'oklahoma_city_thunder_seattle_supersonics'
-performance_df.team[performance_df.team == 'oklahoma_city_thunder'] = u'oklahoma_city_z'
+performance_df.team[performance_df.team == 'oklahoma_city_thunder'] = u'oklahoma_city_thunder_z'
 performance_df.team[performance_df.team == 'new_orleans_hornets'] = u'new_orleans_pelicans_new_orleans_hornets'
 performance_df.team[performance_df.team == 'new_orleans_pelicans'] = u'new_orleans_pelicans_z'
 
@@ -73,3 +73,12 @@ for url in team_urls:
         s_perf_df.iat[counter, 3] = reg
         s_perf_df.iat[counter, 4] = playoff
         counter += 1
+
+# rename, and then set the name as index instead of columns
+s_perf_df.team[s_perf_df.team == 'charlotte_hornets_charlotte_bobcats'] = u'charlotte_bobcats'
+s_perf_df.team[s_perf_df.team == 'oklahoma_city_thunder_seattle_supersonics'] = u'seattle_supersonics'
+s_perf_df.team[s_perf_df.team == 'oklahoma_city_thunder_z'] = u'oklahoma_city_thunder'
+s_perf_df.team[s_perf_df.team == 'new_orleans_pelicans_new_orleans_hornets'] = u'new_orleans_hornets'
+s_perf_df.team[s_perf_df.team == 'new_orleans_pelicans_z'] = u'new_orleans_pelicans'
+
+pickle.dump(s_perf_df, open('skew_record.p', 'wb'))
