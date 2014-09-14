@@ -9,12 +9,6 @@ import get_teams
 
 teams = get_teams.retrieve()
 
-# salary data:
-# http://hoopshype.com/salaries.htm
-# http://hoopshype.com/salaries/golden_state.htm
-# http://www.draftexpress.com/nba-player-salaries/year/2007/
-# http://www.spotrac.com/nba/golden-state-warriors/yearly/
-
 # http://data.shamsports.com/content/pages/data/salaries/2012/warriors.jsp
 
 # 2d np array to store whether or not the given url (combo of the team "name"
@@ -54,9 +48,7 @@ for year in years:
     r = requests.get(url)
     if r.status_code != 404:
         x[i, j] = 1 # score (jk Sixers don't know how to do that)
-        print 'URL valid for team "' + tu + '" and year ' + str(year)
-    else:
-        print '404 for team "' + tu + '" and year ' + str(year)
+        # print 'URL valid for team "' + tu + '" and year ' + str(year)
     j += 1
 
 test_url[3] = tu
