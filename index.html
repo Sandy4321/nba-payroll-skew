@@ -2017,6 +2017,311 @@ In&nbsp;[7]:
 </div>
 
 </div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We also note that there are 0s for valid URL's past 2007 -- this is due to the unfortunate franchise relocations and renamings (New Orleans Hornets became the New Orleans Pelicans, etc.). We'll proceed with our data frame of valid pages, scrape the salaries, and fill in the non-standard holes afterwards.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="salaries">Salaries</h2>
+<p>Now that we have our valid pages, we begin the iterative process of scraping the actual salary numbers from each valid page. We simply leave here the final result (which includes hard-coding some teams where the HTML is just too messy. Honestly, what can you do when the website is designed by someone who includes &quot;$19,000,000ish&quot; as a data point, or decides to randomly not add a new tr tag but still count it as a row?)</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">
+In&nbsp;[2]:
+</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight"><pre><span class="k">def</span> <span class="nf">is_salary_table</span><span class="p">(</span><span class="n">tag</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">&#39;table&#39;</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">tr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">and</span> \
+    <span class="p">(</span><span class="nb">all</span><span class="p">([(</span><span class="n">t</span><span class="o">.</span><span class="n">has_attr</span><span class="p">(</span><span class="s">&#39;class&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">t</span><span class="p">[</span><span class="s">&#39;class&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;blue4&#39;</span><span class="p">)</span> <span class="k">for</span> 
+        <span class="n">t</span> <span class="ow">in</span> <span class="n">tag</span><span class="o">.</span><span class="n">tr</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">)]))</span>
+<span class="k">def</span> <span class="nf">is_total_row</span><span class="p">(</span><span class="n">tag</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">&#39;tr&#39;</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">td</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">td</span><span class="o">.</span><span class="n">string</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span> \
+    <span class="ow">and</span> <span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">td</span><span class="o">.</span><span class="n">string</span><span class="o">.</span><span class="n">split</span><span class="p">())</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">==</span> <span class="s">&#39;totalsalaries&#39;</span><span class="p">)</span> 
+    <span class="c"># classic &quot;Total salaries&quot; vs &quot;Total Salaries&quot; vs &quot;Total Salaries:&quot;</span>
+<span class="k">def</span> <span class="nf">is_player_row</span><span class="p">(</span><span class="n">tag</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">&#39;tr&#39;</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">td</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">td</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">and</span> \
+    <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="mi">6</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">float_conv</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+<span class="c"># given the url to the shamsports.com site</span>
+<span class="k">def</span> <span class="nf">extractSalaryPercents</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">url</span> <span class="o">==</span> <span class="s">&#39;http://data.shamsports.com/content/pages/data/salaries/2008/mavericks.jsp&#39;</span><span class="p">:</span>
+        <span class="n">tot</span> <span class="o">=</span> <span class="mf">106948621.</span>
+    <span class="k">elif</span> <span class="n">url</span> <span class="o">==</span> <span class="s">&#39;http://data.shamsports.com/content/pages/data/salaries/2007/jazz.jsp&#39;</span><span class="p">:</span>
+        <span class="n">tot</span> <span class="o">=</span> <span class="mf">61310247.</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">total_row</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">is_total_row</span><span class="p">)</span>
+        <span class="n">totals</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">string</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">total_row</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">if</span> <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">string</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)]</span>
+        <span class="n">tot</span> <span class="o">=</span> <span class="n">totals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">sal_table</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="n">is_salary_table</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">player_rows</span> <span class="o">=</span> <span class="n">sal_table</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="n">is_player_row</span><span class="p">)</span>
+    <span class="n">sal_strings</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">string</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">player_rows</span><span class="p">]</span>
+    <span class="n">sal_strings</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sal_strings</span> <span class="k">if</span> <span class="n">s</span> <span class="o">!=</span> <span class="s">&#39;N/A&#39;</span><span class="p">]</span>
+    <span class="n">sal_strings</span> <span class="o">=</span> <span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">r&#39;[a-zA-Z]&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sal_strings</span><span class="p">]</span>
+    <span class="n">sals</span> <span class="o">=</span> <span class="p">[</span><span class="n">float_conv</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;\$&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">)))</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sal_strings</span><span class="p">]</span>
+    <span class="n">sal_percs</span> <span class="o">=</span> <span class="p">[</span><span class="n">sal</span> <span class="o">/</span> <span class="n">tot</span> <span class="k">for</span> <span class="n">sal</span> <span class="ow">in</span> <span class="n">sals</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">sal_percs</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We're going to track the salary in another Pandas DataFrame -- the number of columns is 42 simply because we want to allow for strange circumstances where teams are paying more than ~12 players. We omit the output from the code below because, as explained above, it was an iterative process that resulted in many adjustments to the functions defined above.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">
+In&nbsp;[5]:
+</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight"><pre><span class="n">df</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;valid_pages.p&#39;</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">))</span>
+<span class="n">base</span> <span class="o">=</span> <span class="s">&#39;http://data.shamsports.com/content/pages/data/salaries/&#39;</span>
+<span class="c">###################</span>
+<span class="c"># columns: team | year | player 1 salary percentage | player 2 salary percentage ...</span>
+<span class="n">ncol</span> <span class="o">=</span> <span class="mi">42</span>
+<span class="n">sal_perc_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">df</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">ncol</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> 
+                           <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">,</span> <span class="s">&#39;year&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s">&#39;p&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">41</span><span class="p">)])</span>
+<span class="n">rc</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="c"># fill the salary df</span>
+<span class="n">scrape_bad</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">][</span><span class="n">rc</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;year&#39;</span><span class="p">][</span><span class="n">rc</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="c"># scrape salary data</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">base</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span> <span class="o">+</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;.jsp&#39;</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">sal_percs</span> <span class="o">=</span> <span class="n">cs</span><span class="o">.</span><span class="n">extractSalaryPercents</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&#39;Scraping error on url &lt;&#39;</span> <span class="o">+</span> <span class="n">url</span> <span class="o">+</span> <span class="s">&#39;&gt;&#39;</span>
+                <span class="k">print</span> <span class="s">&#39;Improve your extract function, you noob.&#39;</span>
+                <span class="n">scrape_bad</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="k">break</span>
+            <span class="n">sal_percs</span> <span class="o">+=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">((</span><span class="n">ncol</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">sal_percs</span><span class="p">))</span> 
+            <span class="c"># pad the zeros</span>
+            <span class="n">sal_perc_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">rc</span><span class="p">,</span> <span class="mi">2</span><span class="p">:]</span> <span class="o">=</span> <span class="n">sal_percs</span> <span class="c"># fill that row in         </span>
+            <span class="n">rc</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">print</span> <span class="s">&#39;Finished payroll for &#39;</span> <span class="o">+</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;, &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&#39;Skipping 404 page&#39;</span>
+    <span class="k">if</span> <span class="n">scrape_bad</span><span class="p">:</span>
+        <span class="k">break</span>   
+
+<span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">sal_perc_df</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;payroll_shamsports.p&#39;</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="filling-in-the-holes">Filling in the Holes</h2>
+<p>Our salary data frame is looking pretty good:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">
+In&nbsp;[6]:
+</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight"><pre><span class="n">sal_perc_df</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;payroll_shamsports.p&#39;</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">))</span>
+<span class="k">print</span> <span class="n">sal_perc_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+      team  year        p1        p2        p3        p4        p5        p6  \
+0  celtics  2007  0.241152  0.188031  0.186301  0.083729  0.044602  0.033398   
+1  celtics  2008  0.319724  0.220223  0.215375  0.060317  0.043156  0.040383   
+2  celtics  2009  0.312568  0.232209  0.228288  0.057822  0.040497  0.033464   
+3  celtics  2010  0.233356  0.221346  0.193528  0.069008  0.058941  0.053047   
+4  celtics  2011  0.247299  0.182222  0.131318  0.119380  0.075705  0.072791   
+
+         p7        p8    ...     p31  p32  p33  p34  p35  p36  p37  p38  p39  \
+0  0.030961  0.028634    ...       0    0    0    0    0    0    0    0    0   
+1  0.025147  0.020191    ...       0    0    0    0    0    0    0    0    0   
+2  0.031570  0.016607    ...       0    0    0    0    0    0    0    0    0   
+3  0.040243  0.035365    ...       0    0    0    0    0    0    0    0    0   
+4  0.058515  0.039396    ...       0    0    0    0    0    0    0    0    0   
+
+   p40  
+0    0  
+1    0  
+2    0  
+3    0  
+4    0  
+
+[5 rows x 42 columns]
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>but again, there are holes in the rows where we had &quot;invalid&quot; pages in our ShamSports URL testing. What we really want is to rename all the teams by their city and year (so we don't run into problems with Charlotte Hornets vs. Charlotte Bobcats vs. New Orleans Hornets), and then individually scrape the missing data. We do so with the following code:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">
+In&nbsp;[]:
+</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight"><pre><span class="c"># from the team history page for each of those team names (team names)</span>
+<span class="c"># for the upcoming &quot;2015&quot; season, we have</span>
+<span class="c">#</span>
+<span class="c"># hornets: </span>
+<span class="c"># 2015 - present    NBA     Charlotte Hornets</span>
+<span class="c"># 2005 - 2014       NBA     Charlotte Bobcats</span>
+<span class="c"># 1989 - 2002       NBA     Charlotte Hornets</span>
+<span class="c"># </span>
+<span class="c"># pelicans:</span>
+<span class="c"># 2014 - present    NBA     New Orleans Pelicans</span>
+<span class="c"># 2007 - 2013       NBA     New Orleans Hornets</span>
+<span class="c"># 2006 - 2007       NBA     New Orleans/Oklahoma City Hornets</span>
+<span class="c"># 2003 - 2006       NBA     New Orleans Hornets</span>
+<span class="c">#</span>
+<span class="c"># thunder:</span>
+<span class="c"># 2009 - present    NBA     Oklahoma City Thunder</span>
+<span class="c"># 1968 - 2008       NBA     Seattle Supersonics</span>
+
+<span class="c"># this means that we need to retrieve the following salary data to make </span>
+<span class="c"># our data frame 30 (number of teams) * 8 (number of seasons we have) </span>
+<span class="c"># = 240 rows, and also label the team names as &#39;Charlotte Hornets&#39;</span>
+<span class="c"># instead of just &#39;hornets&#39; so our data frame will look more like:</span>
+<span class="c"># new_york_knicks         2007    x0</span>
+<span class="c"># new_orleans_pelicans    2014    x1</span>
+<span class="c"># new_orleans_hornets     2013    x2, etc.</span>
+
+<span class="c"># names of current teams</span>
+<span class="n">teams</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">())</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">get_teams</span><span class="o">.</span><span class="n">retrieve</span><span class="p">()]</span>
+
+<span class="n">ncol</span> <span class="o">=</span> <span class="mi">42</span>
+<span class="n">sal_perc_df_full</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">240</span><span class="p">,</span> <span class="n">ncol</span><span class="p">),</span> 
+    <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">,</span> <span class="s">&#39;year&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s">&#39;p&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">ncol</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)])</span> 
+
+<span class="n">num_seasons</span> <span class="o">=</span> <span class="mi">8</span> <span class="c"># 2007 - 2014</span>
+<span class="n">old_count</span> <span class="o">=</span> <span class="mi">0</span> <span class="c"># tracks where we are in sal_perc_df</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">teams</span><span class="p">)):</span>
+
+    <span class="n">inds</span> <span class="o">=</span> <span class="nb">range</span><span class="p">((</span><span class="n">i</span> <span class="o">*</span> <span class="n">num_seasons</span><span class="p">),((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">num_seasons</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">][</span><span class="n">old_count</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;hornets&#39;</span><span class="p">:</span>
+        <span class="n">sal_perc_df_full</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">][</span><span class="n">inds</span><span class="p">]</span> <span class="o">=</span> <span class="s">u&#39;charlotte_bobcats&#39;</span>
+        <span class="n">sal_perc_df_full</span><span class="p">[</span><span class="s">&#39;year&#39;</span><span class="p">][</span><span class="n">inds</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2007</span><span class="p">,</span> <span class="mi">2015</span><span class="p">)</span>
+        <span class="n">old_count</span> <span class="o">+=</span> <span class="n">sal_perc_df</span><span class="p">[</span><span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;hornets&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">elif</span> <span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">][</span><span class="n">old_count</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;pelicans&#39;</span><span class="p">:</span>
+        <span class="n">sal_perc_df_full</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">][</span><span class="n">inds</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="s">u&#39;new_orleans_hornets&#39;</span>
+        <span class="n">sal_perc_df_full</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">][</span><span class="n">inds</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="s">u&#39;new_orleans_pelicans&#39;</span>
+        <span class="n">sal_perc_df_full</span><span class="p">[</span><span class="s">&#39;year&#39;</span><span class="p">][</span><span class="n">inds</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2007</span><span class="p">,</span> <span class="mi">2015</span><span class="p">)</span>
+        <span class="n">old_count</span> <span class="o">+=</span> <span class="n">sal_perc_df</span><span class="p">[</span><span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;pelicans&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">][</span><span class="n">old_count</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;thunder&#39;</span><span class="p">:</span>
+        <span class="n">sal_perc_df_full</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">][</span><span class="n">inds</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]]</span> <span class="o">==</span> <span class="s">u&#39;seattle_supersonics&#39;</span>
+        <span class="n">sal_perc_df_full</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">][</span><span class="n">inds</span><span class="p">[</span><span class="mi">2</span><span class="p">:]]</span> <span class="o">==</span> <span class="s">u&#39;oklahoma_city_thunder&#39;</span>
+        <span class="n">sal_perc_df_full</span><span class="p">[</span><span class="s">&#39;year&#39;</span><span class="p">][</span><span class="n">inds</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2007</span><span class="p">,</span> <span class="mi">2015</span><span class="p">)</span>
+        <span class="n">old_count</span> <span class="o">+=</span> <span class="n">sal_perc_df</span><span class="p">[</span><span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;thunder&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># name the team the right name</span>
+        <span class="n">sal_perc_df_full</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">][</span><span class="n">inds</span><span class="p">]</span> <span class="o">=</span> <span class="n">teams</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">sal_perc_df_full</span><span class="p">[</span><span class="s">&#39;year&#39;</span><span class="p">][</span><span class="n">inds</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2007</span><span class="p">,</span> <span class="mi">2015</span><span class="p">)</span>
+        <span class="n">old_percs</span> <span class="o">=</span> <span class="n">sal_perc_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">old_count</span><span class="p">:</span><span class="n">old_count</span> <span class="o">+</span> <span class="n">num_seasons</span><span class="p">,</span>
+            <span class="mi">2</span><span class="p">:</span><span class="n">ncol</span><span class="p">]</span>
+        <span class="n">sal_perc_df_full</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">inds</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span><span class="n">ncol</span><span class="p">]</span> <span class="o">=</span> <span class="n">old_percs</span>
+        <span class="n">old_count</span> <span class="o">=</span> <span class="n">old_count</span> <span class="o">+</span> <span class="n">num_seasons</span>
+
+<span class="c"># now we need to fill in salary data for Charlotte Bobcats,</span>
+<span class="c"># New Orleans Hornets/New Orleans Pelicans, Seattle Supersonics/</span>
+<span class="c"># Oklahoma City Thunder</span>
+
+<span class="c"># NO Hornets</span>
+<span class="n">sal_perc_df_full</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">144</span><span class="p">:</span><span class="mi">150</span><span class="p">,</span> <span class="mi">2</span><span class="p">:]</span> <span class="o">=</span> <span class="n">sal_perc_df</span><span class="p">[</span><span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;hornets&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">:]</span>
+<span class="c"># NO Pelicans</span>
+<span class="n">sal_perc_df_full</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">150</span><span class="p">:</span><span class="mi">152</span><span class="p">,</span> <span class="mi">2</span><span class="p">:]</span> <span class="o">=</span> <span class="n">sal_perc_df</span><span class="p">[</span><span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;pelicans&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:]</span>
+<span class="c"># OKC</span>
+<span class="n">sal_perc_df_full</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">218</span><span class="p">:</span><span class="mi">224</span><span class="p">,</span> <span class="mi">2</span><span class="p">:]</span> <span class="o">=</span> <span class="n">sal_perc_df</span><span class="p">[</span><span class="n">sal_perc_df</span><span class="p">[</span><span class="s">&#39;team&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;thunder&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:]</span>
+
+<span class="c"># now salaries that we haven&#39;t collected:</span>
+<span class="c"># Supersonics data can&#39;t be found on ShamSports, so we&#39;re making it nan</span>
+<span class="n">sal_perc_df_full</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">216</span><span class="p">:</span><span class="mi">218</span><span class="p">,</span> <span class="mi">2</span><span class="p">:]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s">&#39;nan&#39;</span><span class="p">)</span>
+
+<span class="c"># Charlotte Bobcats (only changing to Charlotte Hornets for </span>
+<span class="c"># 2014-2015 season)</span>
+<span class="n">sal_perc_df_full</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">168</span><span class="p">:</span><span class="mi">176</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+
+<span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">year</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2007</span><span class="p">,</span> <span class="mi">2015</span><span class="p">):</span>
+    <span class="n">sal_percs</span> <span class="o">=</span> <span class="n">cs</span><span class="o">.</span><span class="n">extractSalaryPercents</span><span class="p">(</span><span class="s">&#39;http://data.shamsports.com/content/pages/data/salaries/&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">year</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;/bobcats.jsp&#39;</span><span class="p">)</span>
+    <span class="n">sal_percs</span> <span class="o">+=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">((</span><span class="n">ncol</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">sal_percs</span><span class="p">))</span>
+    <span class="n">sal_perc_df_full</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">168</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">:]</span> <span class="o">=</span> <span class="n">sal_percs</span>
+    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">sal_perc_df_full</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;fixed_payroll_shamsports.p&#39;</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
     </div>
   </div>
 </body>
