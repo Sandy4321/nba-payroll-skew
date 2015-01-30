@@ -7,7 +7,7 @@ sal_perc_df = pickle.load(open('fixed_payroll_shamsports.p', 'rb'))
 # check that each row sums (approximately) to 1 to see that we didn't mess up a ton
 better_equal_one = sal_perc_df.iloc[:, 2:].sum(axis=1)
 print sorted(better_equal_one[better_equal_one != 1])
-print better_equal_one[better_equal_one != 1]
+print better_equal_one[better_equal_one - 1 > 0.5]
 print sal_perc_df.iloc[202,:]
 
 # looks like nuggets 2009 was a mess up that didn't give an error - 
@@ -31,5 +31,5 @@ for i in range(0, sal_perc_df.shape[0]):
         # filter out the zeroes before calculating starpower
         sp = sum(abs(these_sal[these_sal != 0] - eq))
         skews[i] = float(sp)
-
+print skews[0:10]
 pickle.dump(skews, open('skews.p', 'wb'))
