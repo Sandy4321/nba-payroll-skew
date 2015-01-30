@@ -1,0 +1,6 @@
+- get teams
+- get salaries
+- fill salary holes
+- calculate skew
+- get team performances
+- viz
