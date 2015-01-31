@@ -2731,6 +2731,103 @@ In&nbsp;[16]:
 </div>
 </div>
 </div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><img src="reg_season_by_skew.png"></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>For the three correlation tests, the p-values are (as per usual) for the null hypothesis that the correlation coefficient is 0 (no correlation between the two data), and the alternate hypothesis that it the coefficient is non-zero.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">Pearson</th>
+<th align="left">Kendall</th>
+<th align="left">Spearman</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">corr. coef</td>
+<td align="left">0.2227163</td>
+<td align="left">0.1443681</td>
+<td align="left">0.2108268</td>
+</tr>
+<tr class="even">
+<td align="left">p-value</td>
+<td align="left">0.0005374</td>
+<td align="left">0.000999</td>
+<td align="left">0.001067</td>
+</tr>
+<tr class="odd">
+<td align="left">95 CI for coef</td>
+<td align="left">(0.09833953, 0.34024209)</td>
+<td align="left">n/a</td>
+<td align="left">n/a</td>
+</tr>
+</tbody>
+</table>
+<p>With p-values below 0.01 for all three different correlation tests, we can reject the null hypothesis, concluding that the correlation coefficient is non-zero -- in other words, there is some correlation between the skew statistic computed for a given team and the regular season performance of that team. Looking at the graph with the least squares regression (and the positive correlation coefficient estimates), it would seem that teams with more skewed payrolls perform better in the regular season.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><img src="playoff_by_skew.png"></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">Pearson</th>
+<th align="left">Kendall</th>
+<th align="left">Spearman</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">corr. coef</td>
+<td align="left">0.1757166</td>
+<td align="left">0.1144407</td>
+<td align="left">0.1734847</td>
+</tr>
+<tr class="even">
+<td align="left">p-value</td>
+<td align="left">0.05093</td>
+<td align="left">0.06216</td>
+<td align="left">0.05399</td>
+</tr>
+<tr class="odd">
+<td align="left">95 CI for coef</td>
+<td align="left">(-0.0006191644, 0.3414543721)</td>
+<td align="left">n/a</td>
+<td align="left">n/a</td>
+</tr>
+</tbody>
+</table>
+<p>The correlation between skew and post-season performance seems smaller, with higher p-values than those for skew vs. regular season performance. The regression line also is has a smaller slope. There are also a fair number of teams in the postseason with 0 wins, and skews ranging from ~0.6 all the way to over 1. It seems that once we hit the playoffs, the teams without skewed payrolls (essentially, without stars) can do as well as the star-packed teams. It should be acknowledged that there is not a clean relationship between stars and payroll skew, though, as we have MVP candidates like Steph with relatively small and team-friendly contracts, as well as solid role players / scorers (DLee) who have an inflated contract.</p>
+</div>
+</div>
+</div>
     </div>
   </div>
 </body>
